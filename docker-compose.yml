@@ -10,9 +10,9 @@ services:
     image: lscr.io/linuxserver/radarr:latest
     container_name: radarr
     environment:
-      - PUID=${USER_ID}
-      - PGID=${USER_ID}
-      - TZ=${TZ}
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
     volumes:
       - /docker_hosts/radar/config:/config
       - /share:/share #Access to the entire share
@@ -27,9 +27,9 @@ services:
     image: lscr.io/linuxserver/sonarr:latest
     container_name: sonarr
     environment:
-      - PUID=${USER_ID}
-      - PGID=${USER_ID}
-      - TZ=${TZ}
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
     volumes:
       - /docker_hosts/sonar/config:/config
       - /share:/share #Access to the entire share
@@ -45,9 +45,9 @@ services:
     image: lscr.io/linuxserver/overseerr:latest
     container_name: overseerr
     environment:
-      - PUID=${USER_ID}
-      - PGID=${USER_ID}
-      - TZ=${TZ}
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
     volumes:
       - /docker_hosts/overseer/config:/config
       - /share:/share #Access to the entire share
@@ -65,12 +65,29 @@ services:
     container_name: qbittorrent
    
     environment:
-      - PUID=${USER_ID}
-      - PGID=${USER_ID}
-      - TZ=${TZ}
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
       - WEBUI_PORT=8080
       - TORRENTING_PORT=8694
     volumes:
       - /docker_hosts/qbittorent/config:/config
-      - ${UNRAID_SHARE}:/share
+      - /share:/share
+    restart: unless-stopped
+
+
+  jackett:
+    image: lscr.io/linuxserver/jackett:latest
+    container_name: jackett
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - AUTO_UPDATE=true #optional
+      - RUN_OPTS= #optional
+    volumes:
+      - /path/to/jackett/data:/config
+      - /path/to/blackhole:/downloads
+    ports:
+      - 9117:9117
     restart: unless-stopped
