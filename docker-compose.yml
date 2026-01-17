@@ -1,11 +1,38 @@
-
 version: "3"
-
       
 services:
- 
-  
-  #Radarr - used to find movies automatically
+  gluetun:
+    image: qmcgaw/gluetun
+    container_name: gluetun
+    # line above must be uncommented to allow external containers to connect.
+    # See https://github.com/qdm12/gluetun-wiki/blob/main/setup/connect-a-container-to-gluetun.md#external-container-to-gluetun
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      - "8090:8080" # HTTP proxy
+      - "6881:6881"
+      - "6881:6881/udp"
+    volumes:
+      - /:/gluetun
+    environment:
+      # See https://github.com/qdm12/gluetun-wiki/tree/main/setup#setup
+      - VPN_SERVICE_PROVIDER=protonvpn
+      - VPN_TYPE=wireguard
+      # OpenVPN:
+      #- OPENVPN_USER=
+      #- OPENVPN_PASSWORD=
+      # Wireguard:
+      - WIREGUARD_PRIVATE_KEY=<PUT UR PRIVATE KEY HERE INNIT>
+      - WIREGUARD_ADDRESSES=
+      - SERVER_COUNTRIES= <PUT UR COUNTRY HERE INNIT>
+      # Timezone for accurate log times
+      #- TZ=
+      # Server list updater
+      # See https://github.com/qdm12/gluetun-wiki/blob/main/setup/servers.md#update-the-vpn-servers-list
+      #- UPDATER_PERIOD=  
+#Radarr - used to find movies automatically
   radarr:
     image: lscr.io/linuxserver/radarr:latest
     container_name: radarr
@@ -41,9 +68,9 @@ services:
 
 
   #Overseer - allows users to request media on their own
-  overseerr:
-    image: lscr.io/linuxserver/overseerr:latest
-    container_name: overseerr
+  jellyseer:
+    image: fallenbagel/jellyseerr:latest
+    container_name: jellyseer
     environment:
       - PUID=1000
       - PGID=1000
@@ -58,12 +85,10 @@ services:
     restart: unless-stopped
 
   #Qbittorent - torrenting software
-  #
-  #You can also use RuTorrent, Transmisson or Deluge
   qbittorrent:
     image: lscr.io/linuxserver/qbittorrent:latest
     container_name: qbittorrent
-   
+    network_mode: service:gluetun
     environment:
       - PUID=1000
       - PGID=1000
@@ -90,4 +115,49 @@ services:
       - /path/to/blackhole:/downloads
     ports:
       - 9117:9117
+    restart: unless-stopped
+
+  ##jellyfin
+  jellyfin:
+      image: jellyfin/jellyfin
+      container_name: jellyfin
+      environment:
+        - PUID=1000
+        - PGID=1000
+      volumes:
+        - /docker_hosts/config:/config
+        - /docker_hosts/cache:/cache
+        - /share:/media
+      ports:
+        - 8096:8096
+      restart: unless-stopped
+
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: lidarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - /docker_hosts/lidarr/config:/config
+      - /share:/share # Access to your music/downloads
+    ports:
+      - 8686:8686
+    restart: unless-stopped
+  
+  navidrome:
+    image: deluan/navidrome:latest
+    container_name: navidrome
+    environment:
+      - TZ=Etc/UTC
+      - ND_SPOTIFY_ID=<PUT UR CLIENT KEY HERE INNIT>
+      - ND_SPOTIFY_SECRET=<PUT UR SECRET KEY HERE INNIT>
+      - ND_AUTOIMPORTPLAYLISTS=false
+    user: 1000:1000
+    volumes:
+      - /docker_hosts/navidrome:/data # DB and Cache stored here
+      - /share/media/music:/music:ro                 # :ro = Read Only (Safe for library)
+    ports:
+      - 4533:4533
     restart: unless-stopped
